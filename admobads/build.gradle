@@ -1,0 +1,138 @@
+plugins {
+    id 'com.android.library'
+    id("maven-publish")
+    alias(libs.plugins.kotlin.android)
+}
+
+android {
+    namespace 'com.admobads.ads'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 23
+        targetSdk 36
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    lint {
+        baseline = file("lint-baseline.xml")
+        resourcePrefix 'tlib_'
+    }
+
+    buildFeatures {
+        viewBinding true
+    }
+
+    // Required on AGP 8+/9 so components.release exists for maven-publish
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
+    kotlinOptions {
+        jvmTarget = '11'
+    }
+
+}
+
+ext {
+    PUBLISH_GROUP_ID = "com.github.ads"
+    PUBLISH_VERSION = "v1.0.0"
+    PUBLISH_ARTIFACT_ID = "admobads"
+    PUBLISH_DESCRIPTION = "An android gradle plugin for admob ads"
+    PUBLISH_URL = "https://github.com/t-libraries/Google-Admob-Ads-NextGen"
+    PUBLISH_LICENSE_NAME = "Apache 2.0 License"
+    PUBLISH_LICENSE_URL = "https://www.apache.org/licenses/LICENSE-2.0"
+    PUBLISH_DEVELOPER_ID = "t-libraries"
+    PUBLISH_DEVELOPER_NAME = "t-libraries"
+    PUBLISH_DEVELOPER_EMAIL = "mailto:developerresource@technest.pk"
+    PUBLISH_SCM_CONNECTION = "scm:git:ssh://github.com/t-libraries/Google-Admob-Ads-NextGen.git"
+    PUBLISH_SCM_DEVELOPER_CONNECTION = "scm:git:ssh://github.com/t-libraries/Google-Admob-Ads-NextGen.git"
+    PUBLISH_SCM_URL = "https://github.com/t-libraries/Google-Admob-Ads-NextGen"
+}
+
+version = project.ext.PUBLISH_VERSION
+group = project.ext.PUBLISH_GROUP_ID
+
+afterEvaluate {
+    publishing {
+        publications {
+            // Creates a Maven publication called "release".
+            create("release", MavenPublication) {
+                // Applies the component for the release build variant.
+                from components["release"]
+
+                // Use the properties from the `ext` block
+                groupId = project.ext.PUBLISH_GROUP_ID
+                artifactId = project.ext.PUBLISH_ARTIFACT_ID
+                version = project.ext.PUBLISH_VERSION
+
+                // Add additional metadata to the POM
+                pom {
+                    name.set(project.ext.PUBLISH_ARTIFACT_ID)
+                    description.set(project.ext.PUBLISH_DESCRIPTION)
+                    url.set(project.ext.PUBLISH_URL)
+
+                    licenses {
+                        license {
+                            name.set(project.ext.PUBLISH_LICENSE_NAME)
+                            url.set(project.ext.PUBLISH_LICENSE_URL)
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id.set(project.ext.PUBLISH_DEVELOPER_ID)
+                            name.set(project.ext.PUBLISH_DEVELOPER_NAME)
+                            email.set(project.ext.PUBLISH_DEVELOPER_EMAIL)
+                        }
+                    }
+
+                    scm {
+                        connection.set(project.ext.PUBLISH_SCM_CONNECTION)
+                        developerConnection.set(project.ext.PUBLISH_SCM_DEVELOPER_CONNECTION)
+                        url.set(project.ext.PUBLISH_SCM_URL)
+                    }
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation libs.core.ktx
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
+    implementation 'com.google.android.material:material:1.13.0'
+    implementation("com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk:1.4.0")
+    implementation 'androidx.constraintlayout:constraintlayout-core:1.1.2'
+    implementation 'com.intuit.sdp:sdp-android:1.1.1'
+
+    //lifecycle
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.11.0"
+    implementation "androidx.lifecycle:lifecycle-process:2.11.0"
+
+    implementation 'com.google.code.gson:gson:2.14.0'
+
+
+}
