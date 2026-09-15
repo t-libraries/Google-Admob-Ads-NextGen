@@ -1,6 +1,8 @@
 package com.admobads
 
 import android.app.Activity
+import android.content.Context
+import android.util.Log
 import android.view.View
 import android.widget.FrameLayout
 import androidx.core.graphics.toColorInt
@@ -13,7 +15,13 @@ import com.admobads.ads.AdmobNativeAd
 import com.admobads.ads.BannerPosition
 import com.admobads.ads.utils.AdmobSdkGuard
 import com.admobads.data.RemoteModel
+import com.google.android.libraries.ads.mobile.sdk.MobileAds
+import com.google.android.libraries.ads.mobile.sdk.initialization.InitializationConfig
 import com.google.android.material.card.MaterialCardView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AdmobAdManger(
     private val context: Activity,
@@ -21,9 +29,12 @@ class AdmobAdManger(
     private val adLayout: FrameLayout
 ) {
 
+
+
     companion object {
         private var isPurchased = false
         private var isComposed = false
+        private var TAG = "admobadmanager"
 
         fun isPurchased(value: Boolean = false) {
             isPurchased = value
@@ -40,7 +51,43 @@ class AdmobAdManger(
         fun setAdRevenueListener(revenueMultiplier: Double, listener: AdRevenueListener?) {
             AdRevenueTracker.setListener(revenueMultiplier, listener)
         }
+
+        fun intializeSdk(
+            context: Context,
+            applicationId: String,
+            onInitialized: () -> Unit
+        ) {
+            CoroutineScope(Dispatchers.IO).launch {
+
+                Log.d(TAG, "Admob SDK Start Initializing")
+                val startMs = System.currentTimeMillis()
+
+                MobileAds.initialize(
+                    context,
+                    InitializationConfig.Builder(applicationId).build()
+                ) { status ->
+
+                    Log.d(
+                        TAG,
+                        "Admob adapters finished in ${System.currentTimeMillis() - startMs}ms"
+                    )
+
+                    status.adapterStatusMap.forEach { (name, adapterStatus) ->
+                        Log.d(
+                            TAG,
+                            "Adapter=$name state=${adapterStatus.initializationState} " +
+                                    "latency=${adapterStatus.latency} desc=${adapterStatus.description}"
+                        )
+                    }
+
+                    CoroutineScope(Dispatchers.Main).launch {
+                        onInitialized()
+                    }
+                }
+            }
+        }
     }
+
 
     private var skeletonColor: Int = "#E6E6E6".toColorInt()
     private var ctaPosition: String = "bottom"
@@ -50,6 +97,7 @@ class AdmobAdManger(
 
     private var nativeAdMarginStart = 0
     private var nativeAdMarginEnd = 0
+
 
 
 
