@@ -569,6 +569,12 @@ class AdmobInterstitialAd private constructor() {
 
 
 
+        if (!AdmobSdkGuard.ensureInitialized("AdmobInterstitialAd.showInterAd")) {
+            message.invoke("MobileAds SDK not initialized")
+            callBack.invoke()
+            return
+        }
+
         if (loadingtype == "") {
             AdmobPreloadInterstitialAd.getInstance().showPreloadInter(
                 activity,

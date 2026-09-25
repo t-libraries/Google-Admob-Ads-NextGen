@@ -194,27 +194,32 @@ class AdmobPreloadInterstitialAd private constructor() {
 
         Log.d(TAG, "Inside Config  $config")
 
-        InterstitialAdPreloader.start(
-            AD_UNIT_ID,
-            config,
-            object : PreloadCallback {
-                override fun onAdPreloaded(preloadId: String, responseInfo: ResponseInfo) {
-                    preloadedAdsCount++
-                    adMessage = "Inside Ad Loaded"
-                    Log.d(TAG, "Ad Ready | Total preloaded: $preloadedAdsCount")
-                }
+        try {
+            InterstitialAdPreloader.start(
+                AD_UNIT_ID,
+                config,
+                object : PreloadCallback {
+                    override fun onAdPreloaded(preloadId: String, responseInfo: ResponseInfo) {
+                        preloadedAdsCount++
+                        adMessage = "Inside Ad Loaded"
+                        Log.d(TAG, "Ad Ready | Total preloaded: $preloadedAdsCount")
+                    }
 
-                override fun onAdsExhausted(preloadId: String) {
-                    preloadedAdsCount = 0
-                    Log.d(TAG, "All ads exhausted | Reloading")
-                }
+                    override fun onAdsExhausted(preloadId: String) {
+                        preloadedAdsCount = 0
+                        Log.d(TAG, "All ads exhausted | Reloading")
+                    }
 
-                override fun onAdFailedToPreload(preloadId: String, adError: LoadAdError) {
-                    Log.e(TAG, "Preload failed: ${adError.message}")
-                    adMessage = "Inside Ad Loading Failed Error : ${adError.message}"
+                    override fun onAdFailedToPreload(preloadId: String, adError: LoadAdError) {
+                        Log.e(TAG, "Preload failed: ${adError.message}")
+                        adMessage = "Inside Ad Loading Failed Error : ${adError.message}"
+                    }
                 }
-            }
-        )
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Preload start failed: ${e.message}")
+            adMessage = "MobileAds SDK not initialized"
+        }
     }
 
     fun showPreloadInter(
@@ -224,6 +229,12 @@ class AdmobPreloadInterstitialAd private constructor() {
     ) {
 
         if (AdmobInterstitialAd.getInstance().isPurchased()) {
+            callBack.invoke()
+            return
+        }
+
+        if (!AdmobSdkGuard.ensureInitialized("AdmobPreloadInterstitialAd.showPreloadInter")) {
+            message.invoke("MobileAds SDK not initialized")
             callBack.invoke()
             return
         }
@@ -277,7 +288,7 @@ class AdmobPreloadInterstitialAd private constructor() {
         lastInterShownTime = System.currentTimeMillis()
         isFirstTimeInterShown = true
 
-        val ad = InterstitialAdPreloader.pollAd(AD_UNIT_ID)
+        val ad = pollPreloadedAd()
         ad ?: run {
             callBack.invoke()
             return
@@ -394,8 +405,13 @@ class AdmobPreloadInterstitialAd private constructor() {
             return
         }
 
+        if (!AdmobSdkGuard.ensureInitialized("AdmobPreloadInterstitialAd.showPreloadTimeInter")) {
+            message.invoke("MobileAds SDK not initialized")
+            callBack.invoke()
+            return
+        }
 
-        val ad = InterstitialAdPreloader.pollAd(AD_UNIT_ID)
+        val ad = pollPreloadedAd()
         ad ?: run {
             message.invoke(adMessage)
             callBack.invoke()
@@ -532,7 +548,33 @@ class AdmobPreloadInterstitialAd private constructor() {
     }
 
     fun isReady(): Boolean {
-        return InterstitialAdPreloader.isAdAvailable(AD_UNIT_ID)
+        if (AD_UNIT_ID.isEmpty()) {
+            return false
+        }
+        if (!AdmobSdkGuard.ensureInitialized("AdmobPreloadInterstitialAd.isReady")) {
+            return false
+        }
+        return try {
+            InterstitialAdPreloader.isAdAvailable(AD_UNIT_ID)
+        } catch (e: Exception) {
+            Log.e(TAG, "isReady failed: ${e.message}")
+            false
+        }
+    }
+
+    private fun pollPreloadedAd(): InterstitialAd? {
+        if (AD_UNIT_ID.isEmpty()) {
+            return null
+        }
+        if (!AdmobSdkGuard.ensureInitialized("AdmobPreloadInterstitialAd.pollAd")) {
+            return null
+        }
+        return try {
+            InterstitialAdPreloader.pollAd(AD_UNIT_ID)
+        } catch (e: Exception) {
+            Log.e(TAG, "pollAd failed: ${e.message}")
+            null
+        }
     }
 
     private fun Activity.showAdLoadingView(): View {
@@ -572,7 +614,19 @@ class AdmobPreloadInterstitialAd private constructor() {
 
 
     fun clearPreloadedAds() {
-        InterstitialAdPreloader.destroy(AD_UNIT_ID)
+        if (AD_UNIT_ID.isEmpty()) {
+            preloadedAdsCount = 0
+            return
+        }
+        if (!AdmobSdkGuard.ensureInitialized("AdmobPreloadInterstitialAd.clearPreloadedAds")) {
+            preloadedAdsCount = 0
+            return
+        }
+        try {
+            InterstitialAdPreloader.destroy(AD_UNIT_ID)
+        } catch (e: Exception) {
+            Log.e(TAG, "clearPreloadedAds failed: ${e.message}")
+        }
         preloadedAdsCount = 0
         Log.d(TAG, "All preloaded ads cleared")
     }
