@@ -118,6 +118,7 @@ class AdmobAdManger(
 
         if (!AdmobSdkGuard.ensureInitialized("AdmobAdManger.loadAd")) {
             setupDefaultLayout(default_ad_format)
+            Log.d("sdfslakdfjsa" , "Coming Inside")
             return
         }
 
