@@ -63,16 +63,16 @@ class AdmobBannerAd(
         adType: BannerAdType,
         position: BannerPosition = BannerPosition.BOTTOM
     ) {
-        if (!AdmobSdkGuard.ensureInitialized("AdmobBannerAd.loadBannerAd")) {
-            bannerAdContainer.removeAllViews()
-            bannerAdContainer.visibility = View.GONE
-            return
-        }
+
 
         this.adType = adType
         this.adUnitId = adUnitId
         setupViewHierarchy()
         showLoadingState()
+
+        if (!AdmobSdkGuard.ensureInitialized("AdmobBannerAd.loadBannerAd")) {
+            return
+        }
 
 //        if (!isNetworkAvailable(context)) {
 //            hideAllAdViews()

@@ -102,13 +102,11 @@ public class AdmobNativeAd {
 
     public void load() {
 
+        setupNativeContainer(type);
+
         if (!AdmobSdkGuard.ensureInitialized("AdmobNativeAd.load")) {
-            nativeAdContainer.removeAllViews();
-            nativeAdContainer.setVisibility(View.GONE);
             return;
         }
-
-        setupNativeContainer(type);
 
         List<NativeAd.NativeAdType> adTypes =
                 Arrays.asList(NativeAd.NativeAdType.NATIVE);

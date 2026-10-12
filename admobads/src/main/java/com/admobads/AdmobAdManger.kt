@@ -117,6 +117,7 @@ class AdmobAdManger(
         }
 
         if (!AdmobSdkGuard.ensureInitialized("AdmobAdManger.loadAd")) {
+            setupDefaultLayout(default_ad_format)
             return
         }
 
