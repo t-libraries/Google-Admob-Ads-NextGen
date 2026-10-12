@@ -22,6 +22,8 @@ class MainActivity : AppCompatActivity() {
         ActivityMainBinding.inflate(layoutInflater)
     }
 
+    private var type : RemoteModel? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -79,14 +81,7 @@ class MainActivity : AppCompatActivity() {
             .setTextColor("#000000".toColorInt(), "#4E4E4EFF".toColorInt())
             .setMargintoNative(10, 10)
             .loadAd(
-                RemoteModel(
-                    "ca-app-pub-3940256099942544/9214589741",
-                    "banner",
-                    2,
-                    false,
-                    "#FFC0CB"
-
-                ),
+                type,
                 DefaultAdPlacement.BANNER
             )
     }

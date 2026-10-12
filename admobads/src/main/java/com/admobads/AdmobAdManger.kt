@@ -110,15 +110,13 @@ class AdmobAdManger(
             return
         }
 
-        if (!AdmobSdkGuard.ensureInitialized("AdmobAdManger.loadAd")) {
-            adContainer.visibility = View.GONE
-            adLayout.visibility = View.GONE
-            return
-        }
-
         if (modelItem?.hide == true) {
             adLayout.visibility = View.GONE
             adContainer.visibility = View.GONE
+            return
+        }
+
+        if (!AdmobSdkGuard.ensureInitialized("AdmobAdManger.loadAd")) {
             return
         }
 
