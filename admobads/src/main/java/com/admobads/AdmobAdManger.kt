@@ -52,40 +52,43 @@ class AdmobAdManger(
             AdRevenueTracker.setListener(revenueMultiplier, listener)
         }
 
-        fun intializeSdk(
+
+        fun initializeSdk(
             context: Context,
             applicationId: String,
             onInitialized: () -> Unit
         ) {
             CoroutineScope(Dispatchers.IO).launch {
+                Log.d(TAG, "AdMob SDK initialization started")
 
-                Log.d(TAG, "Admob SDK Start Initializing")
                 val startMs = System.currentTimeMillis()
 
                 MobileAds.initialize(
-                    context,
+                    context.applicationContext,
                     InitializationConfig.Builder(applicationId).build()
                 ) { status ->
-
                     Log.d(
                         TAG,
-                        "Admob adapters finished in ${System.currentTimeMillis() - startMs}ms"
+                        "AdMob adapters finished in ${
+                            System.currentTimeMillis() - startMs
+                        }ms"
                     )
 
                     status.adapterStatusMap.forEach { (name, adapterStatus) ->
                         Log.d(
                             TAG,
                             "Adapter=$name state=${adapterStatus.initializationState} " +
-                                    "latency=${adapterStatus.latency} desc=${adapterStatus.description}"
+                                    "latency=${adapterStatus.latency} " +
+                                    "desc=${adapterStatus.description}"
                         )
                     }
-
-                    CoroutineScope(Dispatchers.Main).launch {
-                        onInitialized()
-                    }
+                }
+                withContext(Dispatchers.Main) {
+                    onInitialized()
                 }
             }
         }
+
     }
 
 
