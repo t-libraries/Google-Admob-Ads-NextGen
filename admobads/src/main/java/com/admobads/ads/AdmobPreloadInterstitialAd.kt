@@ -400,6 +400,16 @@ class AdmobPreloadInterstitialAd private constructor() {
         }
 
         if (!isTimeReadyToShow()) {
+            AdmobInterstitialAd.getInstance().noteClickDuringTimer()
+            message.invoke(adMessage)
+            callBack.invoke()
+            return
+        }
+
+        AdmobInterstitialAd.getInstance().enableClickGapAfterCleanTimer()
+
+        if (AdmobInterstitialAd.getInstance().shouldHoldTimerForClicks(this)) {
+            Log.d(TAG, "Timer ready, waiting for clicks between timer")
             message.invoke(adMessage)
             callBack.invoke()
             return
@@ -420,6 +430,7 @@ class AdmobPreloadInterstitialAd private constructor() {
 
         message.invoke(adMessage)
 
+        AdmobInterstitialAd.getInstance().resetTimerClickCount()
         mInterstitialAd = ad
 
         val callback = object : InterstitialAdEventCallback {
@@ -513,6 +524,36 @@ class AdmobPreloadInterstitialAd private constructor() {
         }
         adRunnable?.let { handler.postDelayed(it, 1500) }
 
+    }
+
+    internal fun hasShownFirstInterstitial(): Boolean = isFirstTimeInterShown
+
+    fun resetCounterAndTimer() {
+        val now = System.currentTimeMillis()
+        if (inter_type == "timer") {
+            AdmobInterstitialAd.getInstance().clearTimerClickGate()
+            if (isFirstTimeInterShown) {
+                lastInterShownTime = now
+            } else {
+                appStartTime = now
+                lastInterShownTime = 0L
+            }
+        } else {
+            currentCounter = if (isFirstTimeInterShown && interCounterGap != 0) {
+                interCounterGap
+            } else if (interCounterStart != 0) {
+                interCounterStart
+            } else if (interCounterGap != 0) {
+                interCounterGap
+            } else {
+                0
+            }
+        }
+
+        Log.d(
+            TAG,
+            "Interstitial counter and timer reset after app open. counter=$currentCounter"
+        )
     }
 
     private fun isTimeReadyToShow(): Boolean {

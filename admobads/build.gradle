@@ -53,7 +53,7 @@ android {
 
 ext {
     PUBLISH_GROUP_ID = "com.github.ads"
-    PUBLISH_VERSION = "v1.0.0"
+    PUBLISH_VERSION = "v1.1.4-a"
     PUBLISH_ARTIFACT_ID = "admobads"
     PUBLISH_DESCRIPTION = "An android gradle plugin for admob ads"
     PUBLISH_URL = "https://github.com/t-libraries/Google-Admob-Ads-NextGen"
@@ -73,17 +73,13 @@ group = project.ext.PUBLISH_GROUP_ID
 afterEvaluate {
     publishing {
         publications {
-            // Creates a Maven publication called "release".
             create("release", MavenPublication) {
-                // Applies the component for the release build variant.
                 from components["release"]
 
-                // Use the properties from the `ext` block
                 groupId = project.ext.PUBLISH_GROUP_ID
                 artifactId = project.ext.PUBLISH_ARTIFACT_ID
                 version = project.ext.PUBLISH_VERSION
 
-                // Add additional metadata to the POM
                 pom {
                     name.set(project.ext.PUBLISH_ARTIFACT_ID)
                     description.set(project.ext.PUBLISH_DESCRIPTION)

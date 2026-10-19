@@ -14,6 +14,7 @@ object AdRevenueTracker {
     const val FORMAT_APP_OPEN = "app_open"
     const val FORMAT_BANNER = "banner"
     const val FORMAT_INTERSTITIAL = "interstitial"
+    const val FORMAT_REWARDED = "rewarded"
     const val FORMAT_NATIVE = "native"
 
     private var revenueMultiplier = 1.20
@@ -70,7 +71,7 @@ object AdRevenueTracker {
         }
 
         val params = Bundle().apply {
-            putDouble("value", revenue)
+            putDouble("custom_ad_value", revenue)
             putString("currency", adValue.currencyCode)
             putString("ad_platform", "Custom")
             putString("ad_source", "Custom")

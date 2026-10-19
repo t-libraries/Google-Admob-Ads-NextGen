@@ -22,23 +22,26 @@ class MyApplication : Application() {
             Log.d("Fireasdfhaskdjflsadfj", "event name = $eventName and params are = $params")
         }
 
-        AdmobAdManger.intializeSdk(this, getString(R.string.appid)) {
+        AdmobAdManger.initializeSdk(this, getString(R.string.appid)) {
+            Log.d("Fireasdfhaskdjflsadfj", "event name")
             AdmobInterstitialAd.getInstance().initInterFromConfig(
                 this@MyApplication,
                 InterAdModel(
-                    inter_type = "timer",
+                    inter_type = "click",
                     loading_type = "api",
+                    inter_timer_reset_after_app_open = true,
+                    clicks_between_inter_timer_start = 4,
+                    clicks_between_inter_timer_gap = 0,
                     inter_counter_start = 1,
-                    inter_counter_gap = 1,
-                    inter_start_after_seconds = 15,
-                    inter_start_load_before_seconds = 5,
-                    inter_gap_after_seconds = 30,
-                    inter_gap_load_before_seconds = 25
+                    inter_counter_gap = 2,
+                    inter_start_after_seconds = 10,
+                    inter_start_load_before_seconds = 10,
+                    inter_gap_after_seconds = 10,
+                    inter_gap_load_before_seconds = 10
                 ),
                 "ca-app-pub-3940256099942544/1033173712"
             )
         }
     }
-
 
 }

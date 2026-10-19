@@ -13,6 +13,7 @@ import com.admobads.AdmobAdManger
 import com.admobads.DefaultAdPlacement
 import com.admobads.ads.AdmobAppOpenAd
 import com.admobads.ads.AdmobInterstitialAd
+import com.admobads.ads.AdmobRewardedAd
 import com.admobads.data.RemoteModel
 import com.transfer.googleadmobnextgensdk.databinding.ActivityMainBinding
 
@@ -53,22 +54,25 @@ class MainActivity : AppCompatActivity() {
 
 
         binding.continueBtn.setOnClickListener {
-            AdmobInterstitialAd.getInstance().showSplashInterAd(
-                this,
 
-                message = {
-                    Toast.makeText(this@MainActivity, it, Toast.LENGTH_SHORT).show()
-                },
+            AdmobInterstitialAd.getInstance().showInterAd(
+                this
+            ) {
+                startActivity(Intent(this, BannerActivity::class.java))
+            }
 
-                callBack = { isSuccess ->
-                    if (isSuccess) {
-                        startActivity(Intent(this, BannerActivity::class.java))
-                    } else {
-                        startActivity(Intent(this, BannerActivity::class.java))
-                    }
-                }
 
-            )
+//
+//            AdmobRewardedAd.getInstance().showRewardedAd(
+//                this, "/21775744923/example/rewarded",
+//                message = {
+//                    Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+//                },
+//                callBack = {
+//
+//                }
+//
+//            )
         }
 
         AdmobAdManger(

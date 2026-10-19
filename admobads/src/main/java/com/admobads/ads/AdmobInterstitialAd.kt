@@ -2,10 +2,12 @@ package com.admobads.ads
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -60,6 +62,19 @@ class AdmobInterstitialAd private constructor() {
     private var isFirstTimeInterShown = false
     private var lastInterShownTime = 0L
     private var appStartTime = 0L
+    private var interTimerResetAfterAppOpen = false
+    private var hasShownInsideInter = false
+    private var clicksBetweenInterTimerStart = 0
+    private var clicksBetweenInterTimer = 0
+    private var timerReadyClickCount = 0
+    private var foregroundActivityClass: String? = null
+    private var timerReadyActivityClass: String? = null
+    private var timerReadyRunnable: Runnable? = null
+    private var clickedDuringTimer = false
+    private var clickGapEnabled = false
+    private var activityWatchRegistered = false
+    private var appContext: Context? = null
+    private var timeLoadRunnable: Runnable? = null
     private var isTimeAdLoaded = false
     private var shouldLoadAd = false
     private var dialogBackgroundColor = "#F8F8F8".toColorInt()
@@ -153,6 +168,7 @@ class AdmobInterstitialAd private constructor() {
     fun setLoadingDialogBgColor(loadingDialogBgColor: Int) {
         this.dialogBackgroundColor = loadingDialogBgColor
         AdmobAppOpenAd.setDialogBGColor(loadingDialogBgColor)
+        AdmobRewardedAd.getInstance().setLoadingDialogBgColor(loadingDialogBgColor)
         AdmobPreloadInterstitialAd.getInstance().setLoadingDialogBgColor(loadingDialogBgColor)
     }
 
@@ -160,6 +176,7 @@ class AdmobInterstitialAd private constructor() {
         this.dialogTextColor = loadingDialogTextColor
         AdmobAppOpenAd.setDialogTextColor(loadingDialogTextColor)
         AdmobPreloadInterstitialAd.getInstance().setLoadingDialogTextColor(loadingDialogTextColor)
+        AdmobRewardedAd.getInstance().setLoadingDialogTextColor(loadingDialogTextColor)
     }
 
     fun initInterFromConfig(
@@ -173,6 +190,11 @@ class AdmobInterstitialAd private constructor() {
         }
 
         isInterIntialized = true
+        interTimerResetAfterAppOpen = config.inter_timer_reset_after_app_open
+        clicksBetweenInterTimerStart = config.clicks_between_inter_timer_start.coerceAtLeast(0)
+        clicksBetweenInterTimer = config.clicks_between_inter_timer_gap.coerceAtLeast(0)
+        appContext = context.applicationContext
+        registerActivityWatch(context)
 
 
         Log.d(TAG, "Inside  ${config?.loading_type}")
@@ -322,17 +344,100 @@ class AdmobInterstitialAd private constructor() {
 
         val loadDelay = showAfter - loadBefore
 
+        timeLoadRunnable?.let { handler.removeCallbacks(it) }
+
         if (loadDelay <= 0) {
+            timeLoadRunnable = null
             load(context, inside_inter_ad_id)
+            scheduleTimerReadyMark()
             return
         }
 
-        Handler(Looper.getMainLooper()).postDelayed({
+        timeLoadRunnable = Runnable {
             if (!isPurchased && mInterstitialAd == null) {
                 load(context, inside_inter_ad_id)
                 isTimeAdLoaded = true
             }
-        }, loadDelay)
+        }
+        timeLoadRunnable?.let { handler.postDelayed(it, loadDelay) }
+        scheduleTimerReadyMark()
+    }
+
+    private fun scheduleTimerReadyMark() {
+        timerReadyRunnable?.let { handler.removeCallbacks(it) }
+        timerReadyActivityClass = null
+        timerReadyClickCount = 0
+        clickedDuringTimer = false
+        clickGapEnabled = false
+
+        val baseTime = if (!isFirstTimeInterShown) appStartTime else lastInterShownTime
+        val requiredTime = if (!isFirstTimeInterShown) {
+            inter_counter_start_time
+        } else {
+            inter_counter_gap_time
+        }
+        val delay = (baseTime + requiredTime) - System.currentTimeMillis()
+        lateinit var markReady: Runnable
+        markReady = Runnable {
+            if (!isTimeReadyToShow()) {
+                val remaining = (baseTime + requiredTime) - System.currentTimeMillis()
+                if (remaining > 0) {
+                    handler.postDelayed(markReady, remaining)
+                }
+                return@Runnable
+            }
+            timerReadyActivityClass = foregroundActivityClass
+            timerReadyClickCount = 0
+            val clicksBetween = clicksRequiredAfterTimer()
+            clickGapEnabled = clicksBetween > 0 && !clickedDuringTimer
+            Log.d(
+                TAG,
+                "Timer completed on $timerReadyActivityClass, " +
+                        "clickGapEnabled=$clickGapEnabled, clicksBetween=$clicksBetween"
+            )
+        }
+        if (delay <= 0) {
+            handler.post(markReady)
+        } else {
+            timerReadyRunnable = markReady
+            handler.postDelayed(markReady, delay)
+        }
+    }
+
+    fun resetAfterAppOpenShown() {
+        if (!interTimerResetAfterAppOpen || !isInterIntialized) {
+            return
+        }
+
+        if (loadingtype != "manual") {
+            AdmobPreloadInterstitialAd.getInstance().resetCounterAndTimer()
+            return
+        }
+
+        if (inter_type == "timer") {
+            if (isFirstTimeInterShown) {
+                lastInterShownTime = System.currentTimeMillis()
+            } else {
+                appStartTime = System.currentTimeMillis()
+                lastInterShownTime = 0L
+            }
+            timeLoadRunnable?.let { handler.removeCallbacks(it) }
+            timeLoadRunnable = null
+            scheduleTimerReadyMark()
+        } else {
+            inter_counter_start = if (hasShownInsideInter && inter_counter_gap != 0) {
+                inter_counter_gap
+            } else if (inter_counter_start_inside != 0) {
+                inter_counter_start_inside
+            } else {
+                inter_counter_gap
+            }
+        }
+
+        Log.d(
+            TAG,
+            "Interstitial counter and timer reset after app open. counter=$inter_counter_start"
+        )
     }
 
     private fun isTimeReadyToShow(): Boolean {
@@ -356,6 +461,82 @@ class AdmobInterstitialAd private constructor() {
         val elapsed = System.currentTimeMillis() - baseTime
         return elapsed >= requiredTime
 
+    }
+
+    private fun registerActivityWatch(context: Context) {
+        if (activityWatchRegistered) return
+        val app = context.applicationContext as? Application ?: return
+        activityWatchRegistered = true
+        app.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+            override fun onActivityResumed(activity: Activity) {
+                if (activity.packageName != app.packageName) return
+                foregroundActivityClass = activity.javaClass.name
+            }
+
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityStarted(activity: Activity) {}
+            override fun onActivityPaused(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {}
+        })
+    }
+
+    internal fun noteClickDuringTimer() {
+        clickedDuringTimer = true
+        clickGapEnabled = false
+        Log.d(TAG, "Click while timer is running, click gap disabled")
+    }
+
+    internal fun enableClickGapAfterCleanTimer() {
+        val clicksBetween = clicksRequiredAfterTimer()
+        if (clicksBetween <= 0 || clickedDuringTimer || !isTimeReadyToShow()) {
+            return
+        }
+        if (clickGapEnabled) return
+        clickGapEnabled = true
+        timerReadyClickCount = 0
+        Log.d(
+            TAG,
+            "No click during timer, click gap enabled. clicksBetween=$clicksBetween"
+        )
+    }
+
+    internal fun shouldHoldTimerForClicks(activity: Activity): Boolean {
+        val clicksBetween = clicksRequiredAfterTimer()
+        if (!clickGapEnabled || clicksBetween <= 0) return false
+        timerReadyClickCount++
+        Log.d(
+            TAG,
+            "Timer click $timerReadyClickCount/${clicksBetween + 1} on ${activity.javaClass.simpleName}"
+        )
+        return timerReadyClickCount <= clicksBetween
+    }
+
+    private fun clicksRequiredAfterTimer(): Int {
+        val beforeFirstInterstitial = if (loadingtype == "manual") {
+            !isFirstTimeInterShown
+        } else {
+            !AdmobPreloadInterstitialAd.getInstance().hasShownFirstInterstitial()
+        }
+        return if (beforeFirstInterstitial) {
+            clicksBetweenInterTimerStart
+        } else {
+            clicksBetweenInterTimer
+        }
+    }
+
+    internal fun resetTimerClickCount() {
+        timerReadyClickCount = 0
+    }
+
+    internal fun clearTimerClickGate() {
+        timerReadyRunnable?.let { handler.removeCallbacks(it) }
+        timerReadyRunnable = null
+        timerReadyActivityClass = null
+        timerReadyClickCount = 0
+        clickedDuringTimer = false
+        clickGapEnabled = false
     }
 
 
@@ -650,6 +831,7 @@ class AdmobInterstitialAd private constructor() {
 
             override fun onAdShowedFullScreenContent() {
                 mInterstitialAd = null
+                hasShownInsideInter = true
                 inter_counter_start = inter_counter_gap
                 runOnMainThread {
                     unblockTouches()
@@ -749,13 +931,29 @@ class AdmobInterstitialAd private constructor() {
             return
         }
 
-
-        if (!isTimeReadyToShow() || mInterstitialAd == null) {
+        if (!isTimeReadyToShow()) {
+            noteClickDuringTimer()
             message.invoke(adMessage)
             callBack.invoke()
             return
         }
 
+        enableClickGapAfterCleanTimer()
+
+        if (mInterstitialAd == null) {
+            message.invoke(adMessage)
+            callBack.invoke()
+            return
+        }
+
+        if (shouldHoldTimerForClicks(this)) {
+            message.invoke(adMessage)
+            callBack.invoke()
+            return
+        }
+
+        resetTimerClickCount()
+        timerReadyActivityClass = null
         message.invoke(adMessage)
 
         val callback =

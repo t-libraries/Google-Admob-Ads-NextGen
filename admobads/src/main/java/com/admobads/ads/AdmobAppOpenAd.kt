@@ -173,6 +173,7 @@ class AdmobAppOpenAd(
             override fun onAdDismissedFullScreenContent() {
                 appOpenAd = null
                 runOnMainThread {
+                    AdmobInterstitialAd.getInstance().resetAfterAppOpenShown()
                     isShowingAd = false
                     unblockTouches()
                 }

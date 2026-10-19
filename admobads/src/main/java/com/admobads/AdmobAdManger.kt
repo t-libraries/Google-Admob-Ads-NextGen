@@ -12,6 +12,7 @@ import com.admobads.ads.AdmobAppOpenAd
 import com.admobads.ads.AdmobBannerAd
 import com.admobads.ads.AdmobInterstitialAd
 import com.admobads.ads.AdmobNativeAd
+import com.admobads.ads.AdmobRewardedAd
 import com.admobads.ads.BannerPosition
 import com.admobads.ads.utils.AdmobSdkGuard
 import com.admobads.data.RemoteModel
@@ -39,6 +40,7 @@ class AdmobAdManger(
         fun isPurchased(value: Boolean = false) {
             isPurchased = value
             AdmobInterstitialAd.getInstance().setPurchased(value)
+            AdmobRewardedAd.getInstance().setPurchased(value)
             AdmobAppOpenAd.setPurchased(value)
         }
 
