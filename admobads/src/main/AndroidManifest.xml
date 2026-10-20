@@ -7,7 +7,6 @@
 
     <application>
 
-
         <activity
             android:name="com.google.android.libraries.ads.mobile.sdk.common.AdActivity"
             android:screenOrientation="portrait"

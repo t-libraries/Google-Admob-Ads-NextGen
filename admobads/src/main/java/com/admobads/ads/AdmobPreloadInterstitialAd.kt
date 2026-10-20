@@ -61,6 +61,8 @@ class AdmobPreloadInterstitialAd private constructor() {
 
     private var pendingActivity: Activity? = null
     private var pendingLoadingView: View? = null
+    private var adPresented = false
+    private var pendingShowCallBack: (() -> Unit)? = null
     private var adMessage: String = "Ad Loading"
 
     private var mInterstitialAd: InterstitialAd? = null
@@ -98,21 +100,37 @@ class AdmobPreloadInterstitialAd private constructor() {
     }
 
     private fun resumeAdIfNeeded() {
+        if (adPresented) return
         if (pendingActivity != null && mInterstitialAd != null && shouldshowAd) {
             pendingActivity?.let { activity ->
 
                 val loadingView = pendingLoadingView
+                var resumeRetries = 0
 
+                adRunnable?.let { handler.removeCallbacks(it) }
                 adRunnable = Runnable {
+                    if (adPresented || activity.isFinishing || activity.isDestroyed) return@Runnable
+                    if (!activity.hasWindowFocus()) {
+                        if (resumeRetries < 8) {
+                            resumeRetries++
+                            adRunnable?.let { handler.postDelayed(it, 300) }
+                            return@Runnable
+                        }
+                        pendingShowCallBack?.let { callback ->
+                            finishPreloadAdAttempt(activity, loadingView, callback)
+                        }
+                        return@Runnable
+                    }
+                    adPresented = true
+                    pendingShowCallBack = null
+                    pendingActivity = null
+                    pendingLoadingView = null
                     activity.hideAdLoadingView(loadingView)
                     mInterstitialAd?.adEventCallback = interCallback
                     mInterstitialAd?.show(activity)
                 }
                 adRunnable?.let { handler.postDelayed(it, 1000) }
             }
-
-            pendingActivity = null
-            pendingLoadingView = null
         }
     }
 
@@ -354,32 +372,61 @@ class AdmobPreloadInterstitialAd private constructor() {
 
         interCallback = callback
         shouldshowAd = true
+        adPresented = false
+        pendingShowCallBack = callBack
         GlobalState.isInterShowing = true
         AdmobAppOpenAd.shouldshowAppOpen(false)
         blockTouches(activity)
         val loadingView = activity.showAdLoadingView()
         pendingActivity = activity
         pendingLoadingView = loadingView
+        var focusRetries = 0
+        adRunnable?.let { handler.removeCallbacks(it) }
         adRunnable = Runnable {
-            if (!isAppInForeground ||
-                activity.isFinishing ||
-                activity.isDestroyed ||
-                !activity.hasWindowFocus()
-            ) {
-                Log.d(TAG, "Ad skipped: app in background or activity invalid")
-                activity.hideAdLoadingView(loadingView)
-                shouldshowAd = false
-                unblockTouches()
-                AdmobAppOpenAd.shouldshowAppOpen(true)
-                callBack.invoke()
-                GlobalState.isInterShowing = false
+            if (adPresented) return@Runnable
+
+            if (activity.isFinishing || activity.isDestroyed) {
+                Log.d(TAG, "Ad skipped: activity gone")
+                finishPreloadAdAttempt(activity, loadingView, callBack)
                 return@Runnable
             }
+
+            if (!isAppInForeground || !activity.hasWindowFocus()) {
+                if (focusRetries < 8) {
+                    focusRetries++
+                    adRunnable?.let { handler.postDelayed(it, 300) }
+                    return@Runnable
+                }
+                Log.d(TAG, "Ad skipped: app in background or activity invalid")
+                finishPreloadAdAttempt(activity, loadingView, callBack)
+                return@Runnable
+            }
+
+            adPresented = true
+            pendingShowCallBack = null
+            pendingActivity = null
+            pendingLoadingView = null
             ad.adEventCallback = callback
             ad.show(activity)
             activity.hideAdLoadingView(loadingView)
         }
         adRunnable?.let { handler.postDelayed(it, 1500) }
+    }
+
+    private fun finishPreloadAdAttempt(
+        activity: Activity,
+        loadingView: View?,
+        callBack: () -> Unit
+    ) {
+        activity.hideAdLoadingView(loadingView)
+        shouldshowAd = false
+        pendingActivity = null
+        pendingLoadingView = null
+        pendingShowCallBack = null
+        unblockTouches()
+        AdmobAppOpenAd.shouldshowAppOpen(true)
+        GlobalState.isInterShowing = false
+        callBack.invoke()
     }
 
     @SuppressLint("StaticFieldLeak")
@@ -492,29 +539,40 @@ class AdmobPreloadInterstitialAd private constructor() {
 
         interCallback = callback
         shouldshowAd = true
+        adPresented = false
+        pendingShowCallBack = callBack
         GlobalState.isInterShowing = true
         AdmobAppOpenAd.shouldshowAppOpen(false)
         blockTouches(this)
         val loadingView = showAdLoadingView()
         pendingActivity = this
         pendingLoadingView = loadingView
+        var focusRetries = 0
+        adRunnable?.let { handler.removeCallbacks(it) }
         adRunnable = Runnable {
+            if (adPresented) return@Runnable
 
-            if (!isAppInForeground ||
-                isFinishing ||
-                isDestroyed ||
-                !hasWindowFocus()
-            ) {
-                Log.d(TAG, "Ad skipped: app in background or activity invalid")
-                hideAdLoadingView(loadingView)
-                shouldshowAd = false
-                unblockTouches()
-                AdmobAppOpenAd.shouldshowAppOpen(true)
-                callBack.invoke()
-                GlobalState.isInterShowing = false
+            if (isFinishing || isDestroyed) {
+                Log.d(TAG, "Ad skipped: activity gone")
+                finishPreloadAdAttempt(this, loadingView, callBack)
                 return@Runnable
             }
 
+            if (!isAppInForeground || !hasWindowFocus()) {
+                if (focusRetries < 8) {
+                    focusRetries++
+                    adRunnable?.let { handler.postDelayed(it, 300) }
+                    return@Runnable
+                }
+                Log.d(TAG, "Ad skipped: app in background or activity invalid")
+                finishPreloadAdAttempt(this, loadingView, callBack)
+                return@Runnable
+            }
+
+            adPresented = true
+            pendingShowCallBack = null
+            pendingActivity = null
+            pendingLoadingView = null
             ad.adEventCallback = callback
             ad.show(this)
             hideAdLoadingView(loadingView)
@@ -748,7 +806,8 @@ class AdmobPreloadInterstitialAd private constructor() {
 
         pendingActivity = null
         pendingLoadingView = null
-
+        pendingShowCallBack = null
+        adPresented = false
 
         mInterstitialAd = null
 

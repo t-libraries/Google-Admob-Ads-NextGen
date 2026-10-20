@@ -87,6 +87,8 @@ class AdmobInterstitialAd private constructor() {
     private var isAppInForeground = true
     private var pendingActivity: Activity? = null
     private var pendingLoadingView: View? = null
+    private var splashAdPresented = false
+    private var pendingSplashCallBack: ((Boolean) -> Unit)? = null
     private var interCallback: InterstitialAdEventCallback? = null
     private var shouldshowAd = false
 
@@ -126,12 +128,31 @@ class AdmobInterstitialAd private constructor() {
     }
 
     private fun resumeAdIfNeeded() {
+        if (splashAdPresented) return
         if (pendingActivity != null && (mInterstitialAd != null || splashInterstitialAd != null) && shouldshowAd) {
             pendingActivity?.let { activity ->
 
                 val loadingView = pendingLoadingView
+                var resumeRetries = 0
 
+                adRunnable?.let { handler.removeCallbacks(it) }
                 adRunnable = Runnable {
+                    if (splashAdPresented || activity.isFinishing || activity.isDestroyed) return@Runnable
+                    if (!activity.hasWindowFocus()) {
+                        if (resumeRetries < 8) {
+                            resumeRetries++
+                            adRunnable?.let { handler.postDelayed(it, 300) }
+                            return@Runnable
+                        }
+                        pendingSplashCallBack?.let { callback ->
+                            finishSplashAdAttempt(activity, loadingView, callback, shown = false)
+                        }
+                        return@Runnable
+                    }
+                    splashAdPresented = true
+                    pendingSplashCallBack = null
+                    pendingActivity = null
+                    pendingLoadingView = null
                     activity.hideAdLoadingView(loadingView)
                     if (splashInterstitialAd != null) {
                         splashInterstitialAd?.adEventCallback = interCallback
@@ -144,9 +165,6 @@ class AdmobInterstitialAd private constructor() {
                 }
                 adRunnable?.let { handler.postDelayed(it, 1000) }
             }
-
-            pendingActivity = null
-            pendingLoadingView = null
         }
     }
 
@@ -615,15 +633,16 @@ class AdmobInterstitialAd private constructor() {
             }
 
             override fun onAdDismissedFullScreenContent() {
+                runOnMainThread {
+                    callBack.invoke(true)
+                    unblockTouches()
+                }
                 splashInterstitialAd = null
                 shouldshowAd = false
                 GlobalState.isInterShowing = false
                 AdmobAppOpenAd.shouldshowAppOpen()
                 adMessage = ""
-                runOnMainThread {
-                    callBack.invoke(true)
-                    unblockTouches()
-                }
+
             }
 
             override fun onAdShowedFullScreenContent() {
@@ -649,32 +668,62 @@ class AdmobInterstitialAd private constructor() {
         AdmobAppOpenAd.shouldshowAppOpen(false)
         GlobalState.isInterShowing = true
         shouldshowAd = true
+        splashAdPresented = false
+        pendingSplashCallBack = callBack
         blockTouches(activity)
         val loadingView = activity.showAdLoadingView()
         pendingActivity = activity
         pendingLoadingView = loadingView
+        var focusRetries = 0
+        adRunnable?.let { handler.removeCallbacks(it) }
         adRunnable = Runnable {
-            if (
-                !isAppInForeground ||
-                activity.isFinishing ||
-                activity.isDestroyed ||
-                !activity.hasWindowFocus()
-            ) {
-                Log.d(TAG, "Splash ad skipped: invalid state")
-                AdmobAppOpenAd.shouldshowAppOpen(true)
-                activity.hideAdLoadingView(loadingView)
-                shouldshowAd = false
-                callBack.invoke(true)
-                unblockTouches()
-                GlobalState.isInterShowing = false
+            // The ad taking the screen makes this activity lose window focus.
+            // That is not a failed show, so don't leave the premium screen.
+            if (splashAdPresented) return@Runnable
+
+            if (activity.isFinishing || activity.isDestroyed) {
+                Log.d(TAG, "Splash ad skipped: activity gone")
+                finishSplashAdAttempt(activity, loadingView, callBack, shown = false)
                 return@Runnable
             }
+
+            if (!isAppInForeground || !activity.hasWindowFocus()) {
+                if (focusRetries < 8) {
+                    focusRetries++
+                    adRunnable?.let { handler.postDelayed(it, 300) }
+                    return@Runnable
+                }
+                Log.d(TAG, "Splash ad skipped: invalid state")
+                finishSplashAdAttempt(activity, loadingView, callBack, shown = false)
+                return@Runnable
+            }
+
+            splashAdPresented = true
+            pendingSplashCallBack = null
+            pendingActivity = null
+            pendingLoadingView = null
             activity.hideAdLoadingView(loadingView)
             splashInterstitialAd?.adEventCallback = callback
             splashInterstitialAd?.show(activity)
-
         }
         adRunnable?.let { handler.postDelayed(it, 1500) }
+    }
+
+    private fun finishSplashAdAttempt(
+        activity: Activity,
+        loadingView: View?,
+        callBack: (Boolean) -> Unit,
+        shown: Boolean
+    ) {
+        AdmobAppOpenAd.shouldshowAppOpen(true)
+        activity.hideAdLoadingView(loadingView)
+        shouldshowAd = false
+        pendingActivity = null
+        pendingLoadingView = null
+        pendingSplashCallBack = null
+        unblockTouches()
+        GlobalState.isInterShowing = false
+        callBack.invoke(shown)
     }
 
     private fun load(ctx: Context, id: String) {

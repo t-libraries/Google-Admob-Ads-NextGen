@@ -53,7 +53,7 @@ android {
 
 ext {
     PUBLISH_GROUP_ID = "com.github.ads"
-    PUBLISH_VERSION = "v1.1.4-a"
+    PUBLISH_VERSION = "v1.1.4-b"
     PUBLISH_ARTIFACT_ID = "admobads"
     PUBLISH_DESCRIPTION = "An android gradle plugin for admob ads"
     PUBLISH_URL = "https://github.com/t-libraries/Google-Admob-Ads-NextGen"
