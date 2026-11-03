@@ -53,7 +53,6 @@ class AdmobAdManger(
             AdRevenueTracker.setListener(revenueMultiplier, listener)
         }
 
-
         fun initializeSdk(
             context: Context,
             applicationId: String,
