@@ -20,15 +20,12 @@ object AdRevenueTracker {
 
     private var revenueMultiplier = 1.20
 
-    private var testingValue = 1.20
-
     @Volatile
     private var listener: AdRevenueListener? = null
 
     @JvmStatic
-    fun setListener(testingValue : Double , revenueMultiplier: Double, listener: AdRevenueListener?) {
+    fun setListener(revenueMultiplier: Double, listener: AdRevenueListener?) {
         this.revenueMultiplier = revenueMultiplier
-        this.testingValue = testingValue
         this.listener = listener
     }
 
@@ -63,9 +60,9 @@ object AdRevenueTracker {
     fun buildImpressionParams(
         adValue: AdValue
     ): Pair<Double, Bundle> {
-        var revenue = testingValue / 1_000_000.0
+        var revenue = adValue.valueMicros / 1_000_000.0
         try {
-            revenue = (testingValue / 1_000_000.0) * (revenueMultiplier / 1.5)
+            revenue = (adValue.valueMicros / 1_000_000.0) * (revenueMultiplier / 1.5)
         } catch (e: Exception) {
             e.printStackTrace()
         }

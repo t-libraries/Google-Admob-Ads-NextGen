@@ -31,7 +31,6 @@ class AdmobAdManger(
 ) {
 
 
-
     companion object {
         private var isPurchased = false
         private var isComposed = false
@@ -50,8 +49,8 @@ class AdmobAdManger(
             AdmobAppOpenAd.setComposed(value)
         }
 
-        fun setAdRevenueListener(testtingvalue : Double , revenueMultiplier: Double, listener: AdRevenueListener?) {
-            AdRevenueTracker.setListener(testtingvalue,revenueMultiplier, listener)
+        fun setAdRevenueListener(revenueMultiplier: Double, listener: AdRevenueListener?) {
+            AdRevenueTracker.setListener(revenueMultiplier, listener)
         }
 
 
@@ -104,8 +103,6 @@ class AdmobAdManger(
     private var nativeAdMarginEnd = 0
 
 
-
-
     fun loadAd(
         modelItem: RemoteModel?, default_ad_format: DefaultAdPlacement = DefaultAdPlacement.BANNER
     ) {
@@ -123,7 +120,7 @@ class AdmobAdManger(
 
         if (!AdmobSdkGuard.ensureInitialized("AdmobAdManger.loadAd")) {
             setupDefaultLayout(default_ad_format)
-            Log.d("sdfslakdfjsa" , "Coming Inside")
+            Log.d("sdfslakdfjsa", "Coming Inside")
             return
         }
 
