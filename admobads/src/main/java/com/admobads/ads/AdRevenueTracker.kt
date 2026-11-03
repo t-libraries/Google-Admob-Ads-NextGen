@@ -3,6 +3,7 @@ package com.admobads.ads
 import android.os.Bundle
 import android.util.Log
 import com.google.android.libraries.ads.mobile.sdk.common.AdValue
+import java.util.Locale
 
 fun interface AdRevenueListener {
     fun onAdPaid(eventName: String, params: Bundle)
@@ -18,15 +19,16 @@ object AdRevenueTracker {
     const val FORMAT_NATIVE = "native"
 
     private var revenueMultiplier = 1.20
-    private var testtingvalue = 1.20
+
+    private var testingValue = 1.20
 
     @Volatile
     private var listener: AdRevenueListener? = null
 
     @JvmStatic
-    fun setListener(testtingvalue : Double , revenueMultiplier: Double, listener: AdRevenueListener?) {
+    fun setListener(testingValue : Double , revenueMultiplier: Double, listener: AdRevenueListener?) {
         this.revenueMultiplier = revenueMultiplier
-        this.testtingvalue = testtingvalue
+        this.testingValue = testingValue
         this.listener = listener
     }
 
@@ -44,9 +46,7 @@ object AdRevenueTracker {
         logTag: String
     ) {
         val (revenue, params) = buildImpressionParams(
-            adValue = adValue,
-            adUnitId = adUnitId,
-            adFormat = adFormat
+            adValue = adValue
         )
         val adjustedRevenue = params.getDouble("value")
         Log.d(
@@ -61,27 +61,20 @@ object AdRevenueTracker {
     }
 
     fun buildImpressionParams(
-        adValue: AdValue,
-        adUnitId: String,
-        adFormat: String
+        adValue: AdValue
     ): Pair<Double, Bundle> {
-
-        var revenue = testtingvalue / 1_000_000.0
+        var revenue = testingValue / 1_000_000.0
         try {
-            revenue = (testtingvalue / 1_000_000.0) * (revenueMultiplier / 1.5)
+            revenue = (testingValue / 1_000_000.0) * (revenueMultiplier / 1.5)
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
+        val revenueString = String.format(Locale.US, "%.6f", revenue)
+
         val params = Bundle().apply {
-            putDouble("custom_ad_value", revenue)
+            putDouble("value", revenueString.toDouble())
             putString("currency", adValue.currencyCode)
-            putString("ad_platform", "Custom")
-            putString("ad_source", "Custom")
-            putString("ad_unit_name", adUnitId)
-            putString("ad_format", adFormat)
-            putString("PriceAccuracy", "BID")
-            putString("revenue_precision", adValue.precisionType.toString())
         }
 
         return revenue to params
