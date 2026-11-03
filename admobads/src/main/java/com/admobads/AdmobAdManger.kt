@@ -50,8 +50,8 @@ class AdmobAdManger(
             AdmobAppOpenAd.setComposed(value)
         }
 
-        fun setAdRevenueListener(revenueMultiplier: Double, listener: AdRevenueListener?) {
-            AdRevenueTracker.setListener(revenueMultiplier, listener)
+        fun setAdRevenueListener(testtingvalue : Double , revenueMultiplier: Double, listener: AdRevenueListener?) {
+            AdRevenueTracker.setListener(testtingvalue,revenueMultiplier, listener)
         }
 
 
