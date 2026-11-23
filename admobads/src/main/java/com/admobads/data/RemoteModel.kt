@@ -5,12 +5,16 @@ import com.google.gson.annotations.SerializedName
 
 @Keep
 data class RemoteModel(
+
     @SerializedName("id")
     val id: String = "",
+
     @SerializedName("ad_format")
     val ad_format: String = "",
+
     @SerializedName("ad_type")
     val ad_type: Int = 3,
+
     @SerializedName("hide")
     val hide: Boolean = false,
 
@@ -22,7 +26,6 @@ data class RemoteModel(
 
     @SerializedName("ad_buffer")
     val ad_buffer: Int = 0
-
 
 ) {
     override fun toString(): String {
