@@ -561,8 +561,10 @@ class AdmobInterstitialAd private constructor() {
         }
 
         val callback = object : AdLoadCallback<InterstitialAd> {
+
             override fun onAdLoaded(interstitialAd: InterstitialAd) {
                 adMessage = "Splash Ad Loaded"
+                Log.d("AdmobInterstitialAd", "Splash Ad Loaded")
                 isPreviousAdLoading = false
                 splashInterAdUnitId = id
                 splashInterstitialAd = interstitialAd
@@ -571,6 +573,7 @@ class AdmobInterstitialAd private constructor() {
 
             override fun onAdFailedToLoad(adError: LoadAdError) {
                 adMessage = "Splash Ad Loading Failed Error: ${adError.message}"
+                Log.d("AdmobInterstitialAd", "Splash Ad Failed to Load")
                 isPreviousAdLoading = false
                 runOnMainThread { onAdFailedToLoad.invoke() }
             }

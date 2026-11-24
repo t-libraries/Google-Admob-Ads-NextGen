@@ -40,17 +40,21 @@ class MainActivity : AppCompatActivity() {
 
         AdmobAdManger.isPurchased(false)
 
-        MyApplication.myApplication?.let {
-            AdmobAppOpenAd(
-                it,
-                "ca-app-pub-3940256099942544/9257395921"
-            )
-        }
 
-        AdmobInterstitialAd.getInstance()
-            .loadSplashInter(this, "ca-app-pub-3940256099942544/1033173712", {
-            }, {
-            })
+        AdmobAdManger.initializeSdk(this, getString(R.string.appid)) {
+            AdmobInterstitialAd.getInstance()
+                .loadSplashInter(this, "ca-app-pub-3940256099942544/1033173712", {
+                }, {
+                })
+
+
+            MyApplication.myApplication?.let {
+                AdmobAppOpenAd(
+                    it,
+                    "ca-app-pub-3940256099942544/9257395921"
+                )
+            }
+        }
 
 
         binding.continueBtn.setOnClickListener {
